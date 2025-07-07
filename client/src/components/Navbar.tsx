@@ -5,20 +5,95 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import MessageIcon from '@mui/icons-material/Message';
 import AddIcon from '@mui/icons-material/Add';
 import PersonIcon from '@mui/icons-material/Person';
-import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../contexts/NotificationContext';
 import api from '../api';
 import Tooltip from '@mui/material/Tooltip';
+import { io, Socket } from 'socket.io-client';
 
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { unreadCount, notifications } = useNotifications();
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [socket, setSocket] = useState<Socket | null>(null);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!user) return;
+      
+      try {
+        const response = await api.get('/api/chat/user/unread');
+        setUnreadCount(response.data.count);
+      } catch (err) {
+        console.error('Error fetching unread count:', err);
+      }
+    };
+
+    fetchUnreadCount();
+    
+    // Set up polling for unread messages
+    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
+    
+    // Listen for custom event when messages are read
+    const handleMessagesRead = () => {
+      fetchUnreadCount();
+    };
+    
+    window.addEventListener('messagesRead', handleMessagesRead);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('messagesRead', handleMessagesRead);
+    };
+  }, [user]);
+
+  // Socket.IO for real-time updates
+  useEffect(() => {
+    if (!user) return;
+
+    // Connect to Socket.IO server
+    const newSocket = io(api.defaults.baseURL || 'http://localhost:5000', {
+      auth: {
+        token: localStorage.getItem('token')
+      },
+      transports: ['websocket', 'polling']
+    });
+
+    newSocket.on('connect', () => {
+      console.log('Connected to Socket.IO server');
+      // Join user's personal room for receiving messages
+      newSocket.emit('joinUserRoom', { userId: user._id });
+    });
+
+    newSocket.on('newMessage', (data) => {
+      // Update unread count when new message is received for current user
+      console.log('New message received:', data);
+      setUnreadCount(prev => prev + 1);
+    });
+
+    newSocket.on('disconnect', () => {
+      console.log('Disconnected from Socket.IO server');
+    });
+
+    newSocket.on('error', (error) => {
+      console.error('Socket.IO error:', error);
+    });
+
+    setSocket(newSocket);
+
+    return () => {
+      if (newSocket) {
+        newSocket.close();
+      }
+    };
+  }, [user]);
 
   const handleLogout = async () => {
     try {
+      // Close socket connection before logout
+      if (socket) {
+        socket.close();
+      }
       logout();
       navigate('/login');
     } catch (error) {
@@ -103,38 +178,22 @@ const Navbar: React.FC = () => {
                 },
               }}
               startIcon={
-                <Badge badgeContent={unreadCount} color="error">
+                <Badge 
+                  badgeContent={unreadCount > 0 ? (unreadCount > 99 ? "99+" : unreadCount) : null} 
+                  color={unreadCount > 5 ? "error" : "warning"}
+                  sx={{
+                    '& .MuiBadge-badge': {
+                      fontSize: unreadCount > 99 ? '0.6rem' : '0.75rem',
+                      minWidth: unreadCount > 99 ? '16px' : '20px',
+                      height: unreadCount > 99 ? '16px' : '20px',
+                    }
+                  }}
+                >
                   <MessageIcon sx={{ fontSize: 26 }} />
                 </Badge>
               }
             >
               Messages
-            </Button>
-          </Tooltip>
-          <Tooltip title="Notifications" arrow>
-            <Button
-              color={location.pathname === '/notifications' ? 'primary' : 'inherit'}
-              component={Link}
-              to="/notifications"
-              sx={{
-                fontWeight: 700,
-                mx: 0.5,
-                px: 2,
-                borderRadius: 2,
-                gap: 0.5,
-                bgcolor: location.pathname === '/notifications' ? 'primary.main' : 'transparent',
-                color: location.pathname === '/notifications' ? 'white' : 'inherit',
-                '&:hover': {
-                  bgcolor: location.pathname === '/notifications' ? 'primary.dark' : 'action.hover',
-                },
-              }}
-              startIcon={
-                <Badge badgeContent={notifications.length} color="warning">
-                  <NotificationsIcon sx={{ fontSize: 26 }} />
-                </Badge>
-              }
-            >
-              Notifications
             </Button>
           </Tooltip>
           <Tooltip title="Profile" arrow>

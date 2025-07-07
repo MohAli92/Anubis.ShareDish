@@ -60,25 +60,20 @@ mongoose.connect(MONGO_URI, {
     }
   });
 
-  // Store user socket mappings
-  const userSockets = new Map();
-
   // Socket.io logic
   io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
-
-    // Join user's personal room for notifications
-    socket.on('joinUserRoom', ({ userId }) => {
-      socket.join(`user_${userId}`);
-      userSockets.set(userId, socket.id);
-      console.log(`User ${userId} joined their notification room`);
-    });
 
     // Join a chat room for a specific post
     socket.on('joinRoom', ({ postId, userId }) => {
       socket.join(postId);
       socket.userId = userId; // Store user ID for this socket
-      console.log(`User ${userId} joined post room: ${postId}`);
+    });
+
+    // Join user's personal room for receiving messages
+    socket.on('joinUserRoom', ({ userId }) => {
+      socket.join(`user_${userId}`);
+      socket.userId = userId; // Store user ID for this socket
     });
 
     // Handle sending a message
@@ -92,8 +87,6 @@ mongoose.connect(MONGO_URI, {
 
         // Save message to DB
         const Chat = require('./models/Chat');
-        const User = require('./models/User');
-        
         let chat = await Chat.findOne({ 
           post: postId,
           users: { $all: [senderId, receiverId], $size: 2 }
@@ -107,12 +100,8 @@ mongoose.connect(MONGO_URI, {
           });
         }
         
-        chat.messages.push({ sender: senderId, text });
+        chat.messages.push({ sender: senderId, text, read: false });
         await chat.save();
-
-        // Get sender info for notification
-        const sender = await User.findById(senderId).select('firstName lastName');
-        const senderName = sender ? `${sender.firstName} ${sender.lastName}` : 'Someone';
 
         // Emit message to all users in the room
         io.to(postId).emit('receiveMessage', {
@@ -121,34 +110,21 @@ mongoose.connect(MONGO_URI, {
           createdAt: new Date()
         });
 
-        // Send real-time notification to receiver
+        // Emit newMessage event to receiver for unread count update
         io.to(`user_${receiverId}`).emit('newMessage', {
-          senderId,
-          senderName,
-          postId,
-          text: text.substring(0, 50) + (text.length > 50 ? '...' : ''),
-          timestamp: new Date()
+          receiverId: receiverId,
+          senderId: senderId,
+          text: text,
+          postId: postId
         });
-
-        console.log(`Notification sent to user ${receiverId} from ${senderName}`);
       } catch (error) {
         console.error('Error saving message:', error);
         socket.emit('error', { message: 'Failed to save message' });
       }
     });
 
-    // Handle user disconnect
     socket.on('disconnect', () => {
       console.log('User disconnected:', socket.id);
-      
-      // Remove user from socket mapping
-      for (const [userId, socketId] of userSockets.entries()) {
-        if (socketId === socket.id) {
-          userSockets.delete(userId);
-          console.log(`User ${userId} removed from socket mapping`);
-          break;
-        }
-      }
     });
   });
 

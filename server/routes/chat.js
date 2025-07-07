@@ -68,7 +68,7 @@ router.post('/:postId/message', auth, async (req, res) => {
       return res.status(403).json({ error: 'You have blocked this user.' });
     }
     
-    chat.messages.push({ sender, text });
+    chat.messages.push({ sender, text, read: false });
     console.log('Saving chat with new message...');
     await chat.save();
     
@@ -155,6 +155,52 @@ router.post('/:chatId/report', auth, async (req, res) => {
     // For now, just log it
     console.log('Report received:', { chatId: req.params.chatId, reporterId, reportedUserId, message });
     res.json({ message: 'Report submitted successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Mark messages as read for a specific chat
+router.patch('/:chatId/read', auth, async (req, res) => {
+  try {
+    const chat = await Chat.findById(req.params.chatId);
+    if (!chat) return res.status(404).json({ error: 'Chat not found' });
+    
+    // Check if user is part of the chat
+    if (!chat.users.includes(req.user._id)) {
+      return res.status(403).json({ error: 'Not authorized to update this chat' });
+    }
+    
+    // Mark all messages sent by other users as read
+    chat.messages.forEach(message => {
+      if (message.sender.toString() !== req.user._id.toString()) {
+        message.read = true;
+      }
+    });
+    
+    await chat.save();
+    res.json({ message: 'Messages marked as read' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get unread message count for current user
+router.get('/user/unread', auth, async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const chats = await Chat.find({ users: userId });
+    
+    let totalUnread = 0;
+    chats.forEach(chat => {
+      chat.messages.forEach(message => {
+        if (message.sender.toString() !== userId.toString() && !message.read) {
+          totalUnread++;
+        }
+      });
+    });
+    
+    res.json({ count: totalUnread });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

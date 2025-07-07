@@ -8,12 +8,10 @@ import AddPost from './pages/AddPost';
 import PostDetails from './pages/PostDetails';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
-import Notifications from './pages/Notifications';
 import EditPost from './pages/EditPost';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
-import { NotificationProvider } from './contexts/NotificationContext';
 
 console.log("Environment Info:");
 console.log("- REACT_APP_API_URL:", process.env.REACT_APP_API_URL);
@@ -98,11 +96,6 @@ const AppRoutes: React.FC = () => {
             <Messages />
           </ProtectedRoute>
         } />
-        <Route path="/notifications" element={
-          <ProtectedRoute>
-            <Notifications />
-          </ProtectedRoute>
-        } />
         <Route path="/edit/:id" element={
           <ProtectedRoute>
             <EditPost />
@@ -117,14 +110,12 @@ const AppRoutes: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <ThemeProvider theme={theme}>
-          <CssBaseline />
-          <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f4f7fa 0%, #e3f0ff 100%)' }}>
-            <AppRoutes />
-          </div>
-        </ThemeProvider>
-      </NotificationProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f4f7fa 0%, #e3f0ff 100%)' }}>
+          <AppRoutes />
+        </div>
+      </ThemeProvider>
     </AuthProvider>
   );
 }
