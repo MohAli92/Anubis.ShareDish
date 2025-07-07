@@ -1,0 +1,34 @@
+{
+  "name": "share-dish",
+  "version": "1.0.0",
+  "description": "A full-stack web application for sharing and discovering food posts",
+  "main": "index.js",
+  "scripts": {
+    "start": "node setup-auto.js && concurrently \"cd server && npm start\" \"cd client && npm start\"",
+    "dev": "node setup-auto.js && concurrently \"cd server && npm run dev\" \"cd client && npm start\"",
+    "install-all": "node setup-auto.js",
+    "setup": "node setup-auto.js",
+    "build": "cd client && npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "food",
+    "sharing",
+    "social",
+    "react",
+    "nodejs",
+    "express"
+  ],
+  "author": "Hesham Elmogy",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "dependencies": {
+    "axios": "^1.10.0"
+  }
+}
