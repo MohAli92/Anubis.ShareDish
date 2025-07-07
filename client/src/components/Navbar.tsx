@@ -5,7 +5,9 @@ import RestaurantIcon from '@mui/icons-material/Restaurant';
 import MessageIcon from '@mui/icons-material/Message';
 import AddIcon from '@mui/icons-material/Add';
 import PersonIcon from '@mui/icons-material/Person';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import api from '../api';
 import Tooltip from '@mui/material/Tooltip';
 
@@ -13,26 +15,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const [unreadCount, setUnreadCount] = useState(0);
-
-  useEffect(() => {
-    const fetchUnreadCount = async () => {
-      if (!user) return;
-      
-      try {
-        const response = await api.get('/api/messages/unread');
-        setUnreadCount(response.data.count);
-      } catch (err) {
-        console.error('Error fetching unread count:', err);
-      }
-    };
-
-    fetchUnreadCount();
-    // Set up polling for unread messages
-    const interval = setInterval(fetchUnreadCount, 30000); // Check every 30 seconds
-
-    return () => clearInterval(interval);
-  }, [user]);
+  const { unreadCount, notifications } = useNotifications();
 
   const handleLogout = async () => {
     try {
@@ -126,6 +109,32 @@ const Navbar: React.FC = () => {
               }
             >
               Messages
+            </Button>
+          </Tooltip>
+          <Tooltip title="Notifications" arrow>
+            <Button
+              color={location.pathname === '/notifications' ? 'primary' : 'inherit'}
+              component={Link}
+              to="/notifications"
+              sx={{
+                fontWeight: 700,
+                mx: 0.5,
+                px: 2,
+                borderRadius: 2,
+                gap: 0.5,
+                bgcolor: location.pathname === '/notifications' ? 'primary.main' : 'transparent',
+                color: location.pathname === '/notifications' ? 'white' : 'inherit',
+                '&:hover': {
+                  bgcolor: location.pathname === '/notifications' ? 'primary.dark' : 'action.hover',
+                },
+              }}
+              startIcon={
+                <Badge badgeContent={notifications.length} color="warning">
+                  <NotificationsIcon sx={{ fontSize: 26 }} />
+                </Badge>
+              }
+            >
+              Notifications
             </Button>
           </Tooltip>
           <Tooltip title="Profile" arrow>

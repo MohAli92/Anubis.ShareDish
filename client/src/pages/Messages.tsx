@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import {
   Container,
   Typography,
@@ -27,6 +28,7 @@ import {
 import { Message as MessageIcon, MoreVert as MoreVertIcon } from '@mui/icons-material';
 import api from '../api';
 import axios from 'axios';
+import { io, Socket } from 'socket.io-client';
 
 interface Chat {
   _id: string;
@@ -54,25 +56,66 @@ interface Chat {
 
 const Messages: React.FC = () => {
   const { user } = useAuth();
+  const { clearNotifications } = useNotifications();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState('');
+  const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState(false);
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const [reportMessage, setReportMessage] = useState('');
-  const [actionLoading, setActionLoading] = useState(false);
-  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
-  // Debug info
-  console.log('🔍 Messages component - User:', user);
-  console.log('🔍 Messages component - Token:', localStorage.getItem('token'));
-  console.log('🔍 Messages component - API URL:', process.env.REACT_APP_API_URL);
-  console.log('🔍 Messages component - Current URL:', window.location.href);
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    if (user?._id) {
+      const newSocket = io(process.env.REACT_APP_API_URL || 'http://localhost:5000');
+      setSocket(newSocket);
+
+      // Join user's personal room for notifications
+      newSocket.emit('joinUserRoom', { userId: user._id });
+
+      // Listen for new messages
+      newSocket.on('receiveMessage', (data) => {
+        if (selectedChat && data.sender !== user._id) {
+          // Update the selected chat with new message
+          const updatedChat = {
+            ...selectedChat,
+            messages: [...selectedChat.messages, {
+              sender: { _id: data.sender, firstName: 'Unknown', lastName: 'User' },
+              text: data.text,
+              createdAt: data.createdAt
+            }]
+          };
+          setSelectedChat(updatedChat);
+
+          // Update chats list
+          setChats(prevChats => 
+            prevChats.map(chat => 
+              chat._id === selectedChat._id ? updatedChat : chat
+            )
+          );
+        }
+      });
+
+      return () => {
+        newSocket.close();
+      };
+    }
+  }, [user?._id, selectedChat]);
+
+  // Clear notifications when entering messages page
+  useEffect(() => {
+    if (user) {
+      clearNotifications();
+    }
+  }, [user, clearNotifications]);
 
   useEffect(() => {
     const fetchChats = async () => {
@@ -110,7 +153,7 @@ const Messages: React.FC = () => {
   }, [user]);
 
   const handleSendMessage = async () => {
-    if (!message.trim() || !selectedChat || !user?._id) return;
+    if (!message.trim() || !selectedChat || !user?._id || !socket) return;
 
     setSending(true);
     try {
@@ -121,19 +164,31 @@ const Messages: React.FC = () => {
         return;
       }
 
-      await api.post('/api/chat/' + selectedChat.post._id + '/message', {
-        sender: user._id,
-        receiver: otherUser._id,
+      // Send message via Socket.IO
+      socket.emit('sendMessage', {
+        postId: selectedChat.post._id,
+        receiverId: otherUser._id,
         text: message
       });
 
-      const chatResponse = await api.get('/api/chat/' + selectedChat.post._id + '/' + user._id + '/' + otherUser._id);
-      const updatedChat = { ...selectedChat, messages: chatResponse.data };
-      setSelectedChat(updatedChat);
+      // Add message to UI immediately
+      const newMessage = {
+        sender: { _id: user._id, firstName: user.firstName, lastName: user.lastName },
+        text: message,
+        createdAt: new Date().toISOString()
+      };
 
-      setChats(chats.map(chat =>
-        chat._id === selectedChat._id ? updatedChat : chat
-      ));
+      const updatedChat = {
+        ...selectedChat,
+        messages: [...selectedChat.messages, newMessage]
+      };
+
+      setSelectedChat(updatedChat);
+      setChats(prevChats => 
+        prevChats.map(chat => 
+          chat._id === selectedChat._id ? updatedChat : chat
+        )
+      );
 
       setMessage('');
     } catch (err: any) {
@@ -167,66 +222,67 @@ const Messages: React.FC = () => {
 
   const handleDeleteConversation = async () => {
     if (!selectedChat) return;
+    
     setActionLoading(true);
-    setActionError(null);
     try {
-      await api.delete('/api/chat/' + selectedChat._id);
-      setChats(chats.filter(chat => chat._id !== selectedChat._id));
+      await api.delete(`/api/chat/${selectedChat._id}`);
+      setChats(prevChats => prevChats.filter(chat => chat._id !== selectedChat._id));
       setSelectedChat(null);
-      setActionSuccess('Conversation deleted successfully.');
-    } catch (err) {
-      setActionError('Failed to delete conversation.');
+      setActionSuccess('Conversation deleted successfully');
+      handleMenuClose();
+    } catch (err: any) {
+      setActionError('Failed to delete conversation');
     } finally {
       setActionLoading(false);
-      handleMenuClose();
     }
   };
 
   const handleBlockUser = async () => {
-    if (!user?._id || !selectedChat) return;
-    const otherUser = getOtherUser(selectedChat);
-    if (!otherUser) return;
+    if (!selectedChat || !user?._id) return;
+    
     setActionLoading(true);
-    setActionError(null);
     try {
-      await api.post('/users/' + user._id + '/block', { blockedUserId: otherUser._id });
-      setActionSuccess('User blocked successfully.');
-    } catch (err) {
-      setActionError('Failed to block user.');
-    } finally {
-      setActionLoading(false);
+      const otherUser = getOtherUser(selectedChat);
+      if (!otherUser) throw new Error('User not found');
+      
+      await api.post(`/api/users/${user._id}/block`, { blockedUserId: otherUser._id });
+      setActionSuccess('User blocked successfully');
       setBlockDialogOpen(false);
       handleMenuClose();
+    } catch (err: any) {
+      setActionError('Failed to block user');
+    } finally {
+      setActionLoading(false);
     }
   };
 
   const handleReport = async () => {
-    if (!user?._id || !selectedChat) return;
-    const otherUser = getOtherUser(selectedChat);
-    if (!otherUser) return;
+    if (!selectedChat || !user?._id) return;
+    
     setActionLoading(true);
-    setActionError(null);
     try {
-      await api.post('/api/chat/' + selectedChat._id + '/report', {
-        reporterId: user._id,
+      const otherUser = getOtherUser(selectedChat);
+      if (!otherUser) throw new Error('User not found');
+      
+      await api.post(`/api/chat/${selectedChat._id}/report`, {
         reportedUserId: otherUser._id,
         message: reportMessage
       });
-      setActionSuccess('Report submitted successfully.');
+      setActionSuccess('Report submitted successfully');
+      setReportDialogOpen(false);
       setReportMessage('');
-    } catch (err) {
-      setActionError('Failed to submit report.');
+      handleMenuClose();
+    } catch (err: any) {
+      setActionError('Failed to submit report');
     } finally {
       setActionLoading(false);
-      setReportDialogOpen(false);
-      handleMenuClose();
     }
   };
 
   if (loading) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
           <CircularProgress />
         </Box>
       </Container>
@@ -328,23 +384,22 @@ const Messages: React.FC = () => {
               {selectedChat ? (
                 <>
                   {selectedChat.messages.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', mt: 4 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
                       <Typography color="text.secondary">
                         No messages yet. Start the conversation!
                       </Typography>
                     </Box>
                   ) : (
-                    <Box display="flex" flexDirection="column" gap={1}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                       {selectedChat.messages.map((msg, index) => {
-                        const senderId = typeof msg.sender === 'string' ? msg.sender : msg.sender._id;
-                        const isSent = String(senderId) === String(user?._id);
+                        const isSent = msg.sender._id === user?._id;
                         return (
                           <Box
                             key={index}
                             sx={{
-                              alignSelf: isSent ? 'flex-end' : 'flex-start',
-                              maxWidth: '70%',
-                              mb: 1
+                              display: 'flex',
+                              justifyContent: isSent ? 'flex-end' : 'flex-start',
+                              mb: 1,
                             }}
                           >
                             <Paper
@@ -356,6 +411,7 @@ const Messages: React.FC = () => {
                                 color: isSent ? 'white' : 'text.primary',
                                 borderTopRightRadius: isSent ? 0 : 12,
                                 borderTopLeftRadius: isSent ? 12 : 0,
+                                maxWidth: '70%',
                               }}
                             >
                               {isSent && (
