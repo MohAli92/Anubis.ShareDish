@@ -10,8 +10,10 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import EditPost from './pages/EditPost';
 import Navbar from './components/Navbar';
+import AdBanner from './components/AdBanner';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AdProvider, useAd } from './contexts/AdContext';
 
 console.log("Environment Info:");
 console.log("- REACT_APP_API_URL:", process.env.REACT_APP_API_URL);
@@ -61,6 +63,7 @@ const theme = createTheme({
 
 const AppRoutes: React.FC = () => {
   const { user, loading } = useAuth();
+  const { adMargin } = useAd();
 
   if (loading) {
     return <div>Loading...</div>;
@@ -69,40 +72,43 @@ const AppRoutes: React.FC = () => {
   return (
     <>
       {user && <Navbar />}
-      <Routes>
-        <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Home />
-          </ProtectedRoute>
-        } />
-        <Route path="/add" element={
-          <ProtectedRoute>
-            <AddPost />
-          </ProtectedRoute>
-        } />
-        <Route path="/post/:id" element={
-          <ProtectedRoute>
-            <PostDetails />
-          </ProtectedRoute>
-        } />
-        <Route path="/profile" element={
-          <ProtectedRoute>
-            <Profile />
-          </ProtectedRoute>
-        } />
-        <Route path="/messages" element={
-          <ProtectedRoute>
-            <Messages />
-          </ProtectedRoute>
-        } />
-        <Route path="/edit/:id" element={
-          <ProtectedRoute>
-            <EditPost />
-          </ProtectedRoute>
-        } />
-        <Route path="*" element={<Navigate to="/login" />} />
-      </Routes>
+      <div style={{ marginLeft: adMargin, transition: 'margin-left 0.5s ease-out' }}>
+        <Routes>
+          <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          <Route path="/add" element={
+            <ProtectedRoute>
+              <AddPost />
+            </ProtectedRoute>
+          } />
+          <Route path="/post/:id" element={
+            <ProtectedRoute>
+              <PostDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          <Route path="/messages" element={
+            <ProtectedRoute>
+              <Messages />
+            </ProtectedRoute>
+          } />
+          <Route path="/edit/:id" element={
+            <ProtectedRoute>
+              <EditPost />
+            </ProtectedRoute>
+          } />
+          <Route path="*" element={<Navigate to="/login" />} />
+        </Routes>
+      </div>
+      <AdBanner />
     </>
   );
 };
@@ -110,12 +116,17 @@ const AppRoutes: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #f4f7fa 0%, #e3f0ff 100%)' }}>
-          <AppRoutes />
-        </div>
-      </ThemeProvider>
+      <AdProvider>
+        <ThemeProvider theme={theme}>
+          <CssBaseline />
+          <div style={{ 
+            minHeight: '100vh', 
+            background: 'linear-gradient(135deg, #f4f7fa 0%, #e3f0ff 100%)'
+          }}>
+            <AppRoutes />
+          </div>
+        </ThemeProvider>
+      </AdProvider>
     </AuthProvider>
   );
 }

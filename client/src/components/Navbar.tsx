@@ -6,6 +6,7 @@ import MessageIcon from '@mui/icons-material/Message';
 import AddIcon from '@mui/icons-material/Add';
 import PersonIcon from '@mui/icons-material/Person';
 import { useAuth } from '../contexts/AuthContext';
+import { useAd } from '../contexts/AdContext';
 import api from '../api';
 import Tooltip from '@mui/material/Tooltip';
 import { io, Socket } from 'socket.io-client';
@@ -14,6 +15,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { adMargin } = useAd();
   const [unreadCount, setUnreadCount] = useState(0);
   const [socket, setSocket] = useState<Socket | null>(null);
 
@@ -106,7 +108,16 @@ const Navbar: React.FC = () => {
   }
 
   return (
-    <AppBar position="sticky" color="inherit" elevation={1}>
+    <AppBar 
+      position="sticky" 
+      color="inherit" 
+      elevation={1}
+      sx={{ 
+        marginLeft: adMargin, 
+        transition: 'margin-left 0.5s ease-out',
+        width: `calc(100% - ${adMargin}px)`
+      }}
+    >
       <Toolbar>
         <Typography
           variant="h6"
