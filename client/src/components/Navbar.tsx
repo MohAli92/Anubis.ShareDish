@@ -113,8 +113,8 @@ const Navbar: React.FC = () => {
       color="inherit" 
       elevation={1}
       sx={{ 
-        marginLeft: adMargin, 
-        transition: 'margin-left 0.5s ease-out',
+        marginRight: adMargin, 
+        transition: 'margin-right 0.5s ease-out',
         width: `calc(100% - ${adMargin}px)`
       }}
     >

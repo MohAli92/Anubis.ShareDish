@@ -30,11 +30,11 @@ export const AdProvider: React.FC<{ children: React.ReactNode }> = ({ children }
       return;
     }
 
-    // Show ad after 5 seconds
+    // Show ad after 2 seconds
     const timer = setTimeout(() => {
       setIsAdVisible(true);
       setAdMargin(280); // Width of the ad banner
-    }, 5000);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [location.pathname]);

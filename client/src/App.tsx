@@ -72,7 +72,7 @@ const AppRoutes: React.FC = () => {
   return (
     <>
       {user && <Navbar />}
-      <div style={{ marginLeft: adMargin, transition: 'margin-left 0.5s ease-out' }}>
+      <div style={{ marginRight: adMargin, transition: 'margin-right 0.5s ease-out' }}>
         <Routes>
           <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
           <Route path="/" element={

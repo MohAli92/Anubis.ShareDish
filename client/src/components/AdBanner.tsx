@@ -63,10 +63,10 @@ const AdBanner: React.FC<AdBannerProps> = ({ onClose }) => {
       return;
     }
 
-    // Show ad after 5 seconds
+    // Show ad after 2 seconds
     const timer = setTimeout(() => {
       setIsAdVisible(true);
-    }, 5000);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, [location.pathname, setIsAdVisible]);
@@ -110,15 +110,15 @@ const AdBanner: React.FC<AdBannerProps> = ({ onClose }) => {
     <Box
       sx={{
         position: 'fixed',
-        left: 0,
+        right: 0,
         top: 0,
         height: '100vh',
         width: '280px',
         zIndex: 1000,
-        animation: 'slideInLeft 0.5s ease-out',
-        '@keyframes slideInLeft': {
+        animation: 'slideInRight 0.5s ease-out',
+        '@keyframes slideInRight': {
           '0%': {
-            transform: 'translateX(-100%)',
+            transform: 'translateX(100%)',
           },
           '100%': {
             transform: 'translateX(0)',
@@ -131,7 +131,7 @@ const AdBanner: React.FC<AdBannerProps> = ({ onClose }) => {
         sx={{
           height: '100%',
           borderRadius: 0,
-          borderRight: '3px solid',
+          borderLeft: '3px solid',
           borderColor: currentAdData.color,
           background: `linear-gradient(135deg, ${currentAdData.bgColor} 0%, #ffffff 100%)`,
           display: 'flex',
