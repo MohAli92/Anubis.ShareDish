@@ -111,8 +111,8 @@ const AdBanner: React.FC<AdBannerProps> = ({ onClose }) => {
       sx={{
         position: 'fixed',
         right: 0,
-        top: 0,
-        height: '100vh',
+        top: '64px', // Height of the navbar
+        height: 'calc(100vh - 64px)',
         width: '280px',
         zIndex: 1000,
         animation: 'slideInRight 0.5s ease-out',
