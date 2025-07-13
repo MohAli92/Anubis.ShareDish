@@ -87,7 +87,7 @@ share-dish-main/
    Go to PORTS in CodeSpace
    Right Click on Backend(5000) port
    Choose *Port Visibility*
-   change it to ## **"PUBLIC"**
+   change it to *"Public"*
    
    # Start both server and client (from root directory)
    npm run dev
@@ -227,7 +227,7 @@ Make sure to set these environment variables in production:
 ## Contact
 
 ## *Anubis Team*
-- Mohamed Sadek,
-- Mohamed Nouh,
+- Mohamed Sadek
+- Mohamed Nouh
 - Hesham Elmogy
 
