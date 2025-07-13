@@ -83,6 +83,12 @@ share-dish-main/
 
 5. **Start the application**
    ```bash
+   # First of all:
+   Go to PORTS in CodeSpace
+   Right Click on Backend(5000) PORT
+   Choose *Port Visibility*
+   change it to # "PUBLIC"
+   
    # Start both server and client (from root directory)
    npm run dev
    
@@ -205,9 +211,6 @@ Make sure to set these environment variables in production:
    - Passwords must be at least 6 characters with at least one number
    - Check that bcrypt is properly installed
 
-## 📝 License
-
-This project is licensed under the MIT License.
 
 ## 🤝 Contributing
 
@@ -223,5 +226,8 @@ This project is licensed under the MIT License.
 
 ## Contact
 
-Anubis Team
+## *Anubis Team*
+Mohamed Sadek
+Mohamed Nouh
+Hesham Elmogy
 
