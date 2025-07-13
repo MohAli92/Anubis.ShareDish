@@ -85,7 +85,7 @@ share-dish-main/
    ```bash
    # First of all:
    Go to PORTS in CodeSpace
-   Right Click on Backend(5000) port
+   Right Click on *Backend(5000)* port
    Choose *Port Visibility*
    change it to *"Public"*
    
